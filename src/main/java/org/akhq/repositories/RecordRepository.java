@@ -46,6 +46,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -130,52 +132,97 @@ public class RecordRepository extends AbstractRepository {
 
     public List<Record> consume(String clusterId, Options options) throws ExecutionException, InterruptedException {
         return Debug.call(() -> {
-            Topic topicsDetail = topicRepository.findByName(clusterId, options.topic);
+            Topic topic = topicRepository.findByName(clusterId, options.topic);
+            boolean isOldestSort = options.sort == Options.Sort.OLDEST;
 
-            if (options.sort == Options.Sort.OLDEST) {
-                return consumeOldest(topicsDetail, options);
-            } else {
-                return consumeNewest(topicsDetail, options);
-            }
+            return topic
+                .getPartitions()
+                .parallelStream()
+                .map(partition -> {
+                        KafkaConsumer<byte[], byte[]> consumer = this.kafkaModule.getConsumer(
+                            options.clusterId,
+                            new Properties() {{
+                                put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(options.size));
+                            }}
+                        );
+
+                        // Get poll start/end offset depending on the sort and options
+                        Optional<OffsetBound> offsetBound =  isOldestSort
+                            ? getOffsetsForSortOldest(consumer, partition, options)
+                            : getOffsetsForSortNewest(consumer, partition, options, options.size);
+
+                        return offsetBound.map(offset -> offset.withTopicPartition(
+                            new TopicPartition(
+                                partition.getTopic(),
+                                partition.getId()
+                            )
+                        ));
+                    }
+                )
+                // Keep only partitions where polling is possible
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .flatMap(topicPartitionOffset -> {
+                    // Init the consumer with the partition
+                    long beginOffset = topicPartitionOffset.getBegin();
+                    long endOffset = topicPartitionOffset.end;
+                    topicPartitionOffset.getConsumer().assign(Collections.singleton(topicPartitionOffset.getTopicPartition()));
+                    topicPartitionOffset.getConsumer().seek(topicPartitionOffset.getTopicPartition(), beginOffset);
+
+                    List<Record> list = new ArrayList<>();
+
+                    do {
+                        ConsumerRecords<byte[], byte[]> records;
+
+                        records = this.poll(topicPartitionOffset.getConsumer());
+
+                        if (log.isInfoEnabled()) {
+                            log.info(
+                                "Consume [topic: {}] [partition: {}] [start: {} - end: {}] [count: {}]",
+                                topicPartitionOffset.getTopicPartition().topic(),
+                                topicPartitionOffset.getTopicPartition().partition(),
+                                beginOffset,
+                                endOffset,
+                                records.count()
+                            );
+                        }
+
+                        if (records.isEmpty())
+                            break;
+
+                        long finalEndOffset = endOffset;
+                        StreamSupport
+                            .stream(records.spliterator(), false)
+                            // Useful for newest sort in reverse order poll to prevent iterating over records twice
+                            .filter(r -> r.offset() < finalEndOffset)
+                            .map(r -> newRecord(r, options, topic))
+                            .filter(r -> matchFilter(options, r))
+                            .peek(this::filterMessageLength)
+                            .forEach(list::add);
+
+                        // On newest sort, continue to poll in reverse order until we have enough records
+                        if (!isOldestSort) {
+                            if (beginOffset == 0)
+                                break;
+
+                            endOffset = beginOffset;
+                            beginOffset = beginOffset - options.size > 0 ? beginOffset - options.size : 0L;
+                            topicPartitionOffset.getConsumer().seek(topicPartitionOffset.getTopicPartition(), beginOffset);
+                        }
+                    }
+                    // Poll until we got enough records for the partition
+                    while (list.size() < options.size);
+
+                    topicPartitionOffset.getConsumer().close();
+
+                    return Stream.of(list);
+                })
+                .flatMap(List::stream)
+                .sorted(isOldestSort ? Comparator.comparing(Record::getTimestamp)
+                    : Comparator.comparing(Record::getTimestamp).reversed())
+                .limit(options.size)
+                .collect(Collectors.toList());
         }, "Consume with options {}", Collections.singletonList(options.toString()));
-    }
-
-    private List<Record> consumeOldest(Topic topic, Options options) {
-        KafkaConsumer<byte[], byte[]> consumer = this.kafkaModule.getConsumer(options.clusterId);
-        Map<TopicPartition, Long> partitions = getTopicPartitionForSortOldest(topic, options, consumer);
-        List<Record> list = new ArrayList<>();
-
-        if (partitions.size() > 0) {
-            consumer.assign(partitions.keySet());
-            partitions.forEach(consumer::seek);
-
-            if (log.isTraceEnabled()) {
-                partitions.forEach((topicPartition, first) ->
-                    log.trace(
-                        "Consume [topic: {}] [partition: {}] [start: {}]",
-                        topicPartition.topic(),
-                        topicPartition.partition(),
-                        first
-                    )
-                );
-            }
-
-            ConsumerRecords<byte[], byte[]> records = this.poll(consumer);
-
-            for (ConsumerRecord<byte[], byte[]> record : records) {
-                Record current = newRecord(record, options, topic);
-                if (searchFilter(options, current)) {
-                    filterMessageLength(current);
-                    list.add(current);
-                }
-            }
-        }
-
-        consumer.close();
-
-        list.sort(Comparator.comparing(Record::getTimestamp));
-
-        return list;
     }
 
     public List<TimeOffset> getOffsetForTime(String clusterId, List<org.akhq.models.TopicPartition> partitions, Long timestamp) throws ExecutionException, InterruptedException {
@@ -245,7 +292,7 @@ public class RecordRepository extends AbstractRepository {
         return topic
             .getPartitions()
             .stream()
-            .map(partition -> getFirstOffsetForSortOldest(consumer, partition, options)
+            .map(partition -> getOffsetsForSortOldest(consumer, partition, options)
                 .map(offsetBound -> offsetBound.withTopicPartition(
                     new TopicPartition(
                         partition.getTopic(),
@@ -256,104 +303,6 @@ public class RecordRepository extends AbstractRepository {
             .filter(Optional::isPresent)
             .map(Optional::get)
             .collect(Collectors.toMap(OffsetBound::getTopicPartition, OffsetBound::getBegin));
-    }
-
-    private List<Record> consumeNewest(Topic topic, Options options) {
-        int pollSizePerPartition = pollSizePerPartition(topic, options);
-
-        return topic
-            .getPartitions()
-            .parallelStream()
-            .map(partition -> {
-                KafkaConsumer<byte[], byte[]> consumer = this.kafkaModule.getConsumer(
-                    options.clusterId,
-                    new Properties() {{
-                        put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(pollSizePerPartition));
-                    }}
-                );
-
-                return getOffsetForSortNewest(consumer, partition, options, pollSizePerPartition)
-                        .map(offset -> offset.withTopicPartition(
-                            new TopicPartition(
-                                partition.getTopic(),
-                                partition.getId()
-                            )
-                        ));
-                }
-            )
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .flatMap(topicPartitionOffset -> {
-                topicPartitionOffset.getConsumer().assign(Collections.singleton(topicPartitionOffset.getTopicPartition()));
-                topicPartitionOffset.getConsumer().seek(topicPartitionOffset.getTopicPartition(), topicPartitionOffset.getBegin());
-
-                if (log.isTraceEnabled()) {
-                    log.trace(
-                        "Consume Newest [topic: {}] [partition: {}] [start: {}]",
-                        topicPartitionOffset.getTopicPartition().topic(),
-                        topicPartitionOffset.getTopicPartition().partition(),
-                        topicPartitionOffset.getBegin()
-                    );
-                }
-
-                List<Record> list = new ArrayList<>();
-                int emptyPoll = 0;
-
-                do {
-                    ConsumerRecords<byte[], byte[]> records;
-
-                    records = this.poll(topicPartitionOffset.getConsumer());
-
-                    if (records.isEmpty()) {
-                        emptyPoll++;
-                    } else {
-                        if (log.isTraceEnabled()) {
-                            log.trace(
-                                "Empty pool [topic: {}] [partition: {}]",
-                                topicPartitionOffset.getTopicPartition().topic(),
-                                topicPartitionOffset.getTopicPartition().partition()
-                            );
-                        }
-                        emptyPoll = 0;
-                    }
-
-                    for (ConsumerRecord<byte[], byte[]> record : records) {
-                        if (record.offset() > topicPartitionOffset.getEnd()) {
-                            emptyPoll = 2;
-                            break;
-                        }
-                        Record current = newRecord(record, options, topic);
-                        if (searchFilter(options, current)) {
-                            filterMessageLength(current);
-                            list.add(current);
-                        }
-
-                        // End of the partition, we can stop here
-                        if (record.offset() == topicPartitionOffset.getEnd()) {
-                            emptyPoll = 1;
-                            break;
-                        }
-                    }
-                }
-                while (emptyPoll < 1);
-
-                Collections.reverse(list);
-
-                topicPartitionOffset.getConsumer().close();
-
-                return Stream.of(list);
-            })
-            .flatMap(List::stream)
-            .sorted(Comparator.comparing(Record::getTimestamp).reversed())
-            .collect(Collectors.toList());
-    }
-
-    private int pollSizePerPartition(Topic topic, Options options) {
-        if (options.partition != null) {
-            return options.size;
-        } else {
-            return (int) Math.ceil(options.size * 1.0 / topic.getPartitions().size());
-        }
     }
 
     private Optional<Long> getFirstOffset(KafkaConsumer<byte[], byte[]> consumer, Partition partition, Options options) {
@@ -383,7 +332,7 @@ public class RecordRepository extends AbstractRepository {
         return Optional.of(first);
     }
 
-    private Optional<OffsetBound> getFirstOffsetForSortOldest(KafkaConsumer<byte[], byte[]> consumer, Partition partition, Options options) {
+    private Optional<OffsetBound> getOffsetsForSortOldest(KafkaConsumer<byte[], byte[]> consumer, Partition partition, Options options) {
         return getFirstOffset(consumer, partition, options)
             .map(first -> {
                 if (options.after.size() > 0 && options.after.containsKey(partition.getId())) {
@@ -396,11 +345,13 @@ public class RecordRepository extends AbstractRepository {
 
                 return OffsetBound.builder()
                     .begin(first)
+                    .end(partition.getLastOffset())
+                    .consumer(consumer)
                     .build();
             });
     }
 
-    private Optional<EndOffsetBound> getOffsetForSortNewest(KafkaConsumer<byte[], byte[]> consumer, Partition partition, Options options, int pollSizePerPartition) {
+    private Optional<OffsetBound> getOffsetsForSortNewest(KafkaConsumer<byte[], byte[]> consumer, Partition partition, Options options, int pollSizePerPartition) {
         return getFirstOffset(consumer, partition, options)
             .map(first -> {
                 // Take end offset - 1 to get the last record offset
@@ -418,7 +369,7 @@ public class RecordRepository extends AbstractRepository {
                     first = last - pollSizePerPartition + 1;
                 }
 
-                return EndOffsetBound.builder()
+                return OffsetBound.builder()
                     .consumer(consumer)
                     .begin(first)
                     .end(last)
@@ -711,7 +662,7 @@ public class RecordRepository extends AbstractRepository {
                 currentEvent.updateProgress(record);
 
                 Record current = newRecord(record, options, topic);
-                if (searchFilter(options, current)) {
+                if (matchFilter(options, current)) {
                     list.add(current);
                     matchesCount.getAndIncrement();
 
@@ -741,7 +692,7 @@ public class RecordRepository extends AbstractRepository {
         });
     }
 
-    private static boolean searchFilter(BaseOptions options, Record record) {
+    private static boolean matchFilter(BaseOptions options, Record record) {
 
         if (options.getSearch() != null) {
             return search(options.getSearch(), Arrays.asList(record.getKey(), record.getValue()));
@@ -965,7 +916,7 @@ public class RecordRepository extends AbstractRepository {
                 );
 
                 Record current = newRecord(record, options, state.getTopics().get(record.topic()));
-                if (searchFilter(options, current)) {
+                if (matchFilter(options, current)) {
                     list.add(current);
                     log.trace(
                         "Record [topic: {}] [partition: {}] [offset: {}] [key: {}]",
@@ -1298,14 +1249,6 @@ public class RecordRepository extends AbstractRepository {
     @Data
     @Builder
     private static class OffsetBound {
-        @With
-        private final TopicPartition topicPartition;
-        private final long begin;
-    }
-
-    @Data
-    @Builder
-    private static class EndOffsetBound {
         @With
         private final TopicPartition topicPartition;
         private final long begin;
