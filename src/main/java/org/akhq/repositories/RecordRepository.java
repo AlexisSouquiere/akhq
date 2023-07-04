@@ -609,86 +609,87 @@ public class RecordRepository extends AbstractRepository {
     public Flowable<Event<SearchEvent>> search(Topic topic, Options options) throws ExecutionException, InterruptedException {
         AtomicInteger matchesCount = new AtomicInteger();
 
-        Properties properties = new Properties();
-        properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, options.getSize());
-
         return Flowable.generate(() -> {
-            KafkaConsumer<byte[], byte[]> consumer = this.kafkaModule.getConsumer(options.clusterId, properties);
-            Map<TopicPartition, Long> partitions = getTopicPartitionForSortOldest(topic, options, consumer);
+            List<KafkaConsumer<byte[], byte[]>> consumers = topic
+                .getPartitions()
+                .parallelStream()
+                .map(partition -> {
+                    KafkaConsumer<byte[], byte[]> consumer = this.kafkaModule.getConsumer(
+                        options.clusterId,
+                        new Properties() {{
+                            put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(options.size));
+                        }}
+                    );
 
-            if (partitions.size() == 0) {
-                return new SearchState(consumer, null);
-            }
+                    // Get poll start/end offset depending on the sort and options
+                    Optional<OffsetBound> offsetBound =  getOffsetsForSortOldest(consumer, partition, options);
 
-            consumer.assign(partitions.keySet());
-            partitions.forEach(consumer::seek);
+                    TopicPartition topicPartition = new TopicPartition(partition.getTopic(), partition.getId());
 
-            partitions.forEach((topicPartition, first) ->
-                log.trace(
-                    "Search [topic: {}] [partition: {}] [start: {}]",
-                    topicPartition.topic(),
-                    topicPartition.partition(),
-                    first
-                )
-            );
+                    consumer.assign(Collections.singleton(topicPartition));
+                    consumer.seek(topicPartition, offsetBound.get().getBegin());
 
-            return new SearchState(consumer, new SearchEvent(topic));
+                    return consumer;
+                })
+                .collect(Collectors.toList());
+            ;
+            return new SearchState(consumers,
+                new SearchEvent(topic));
         }, (searchState, emitter) -> {
             SearchEvent searchEvent = searchState.getSearchEvent();
-            KafkaConsumer<byte[], byte[]> consumer = searchState.getConsumer();
+            List<KafkaConsumer<byte[], byte[]>> consumers = searchState.getConsumers();
 
             // end
-            if (searchEvent == null || searchEvent.emptyPoll == 666) {
+            if (searchEvent == null || !searchEvent.emptyPoll.containsValue(false)) {
                 emitter.onNext(new SearchEvent(topic).end(searchEvent != null ? searchEvent.after: null));
                 emitter.onComplete();
-                consumer.close();
+                consumers.forEach(KafkaConsumer::close);
 
-                return new SearchState(consumer, searchEvent);
+                return new SearchState(consumers, searchEvent);
             }
 
             SearchEvent currentEvent = new SearchEvent(searchEvent);
 
-            ConsumerRecords<byte[], byte[]> records = this.poll(consumer);
+            List<Record> list = Collections.synchronizedList(new ArrayList<>());
 
-            if (records.isEmpty()) {
-                currentEvent.emptyPoll++;
-            } else {
-                currentEvent.emptyPoll = 0;
-            }
+            consumers.forEach(consumer -> {
+                ConsumerRecords<byte[], byte[]> records = this.poll(consumer);
 
-            List<Record> list = new ArrayList<>();
-
-            for (ConsumerRecord<byte[], byte[]> record : records) {
-                currentEvent.updateProgress(record);
-
-                Record current = newRecord(record, options, topic);
-                if (matchFilter(options, current)) {
-                    list.add(current);
-                    matchesCount.getAndIncrement();
-
-                    log.trace(
-                        "Record [topic: {}] [partition: {}] [offset: {}] [key: {}]",
-                        record.topic(),
-                        record.partition(),
-                        record.offset(),
-                        record.key()
-                    );
+                if (records.isEmpty()) {
+                    currentEvent.emptyPoll.put(consumer.assignment().iterator().next().partition(), true);
                 }
-            }
+
+                for (ConsumerRecord<byte[], byte[]> record : records) {
+                    currentEvent.updateProgress(record);
+
+                    Record current = newRecord(record, options, topic);
+                    if (matchFilter(options, current)) {
+                        list.add(current);
+                        matchesCount.getAndIncrement();
+
+                        log.info(
+                            "Record [topic: {}] [partition: {}] [offset: {}] [key: {}]",
+                            record.topic(),
+                            record.partition(),
+                            record.offset(),
+                            record.key()
+                        );
+                    }
+                }
+            });
 
             currentEvent.records = list;
 
-            if (currentEvent.emptyPoll >= 1) {
-                currentEvent.emptyPoll = 666;
+            if (!currentEvent.emptyPoll.containsValue(false)) {
                 emitter.onNext(currentEvent.end(searchEvent.getAfter()));
             } else if (matchesCount.get() >= options.getSize()) {
-                currentEvent.emptyPoll = 666;
+                currentEvent.emptyPoll.replaceAll((k, v) -> true);
                 emitter.onNext(currentEvent.progress(options));
             } else {
                 emitter.onNext(currentEvent.progress(options));
             }
 
-            return new SearchState(consumer, currentEvent);
+            return new SearchState(consumers, currentEvent);
         });
     }
 
@@ -814,16 +815,18 @@ public class RecordRepository extends AbstractRepository {
         private List<Record> records = new ArrayList<>();
         private String after;
         private double percent;
-        private int emptyPoll = 0;
+        private Map<Integer, Boolean> emptyPoll = new HashMap<>();
 
         private SearchEvent(SearchEvent event) {
             this.offsets = event.offsets;
+            this.emptyPoll = event.emptyPoll;
         }
 
         private SearchEvent(Topic topic) {
             topic.getPartitions()
                 .forEach(partition -> {
                     offsets.put(partition.getId(), new Offset(partition.getFirstOffset(), partition.getFirstOffset(), partition.getLastOffset()));
+                    emptyPoll.put(partition.getId(), false);
                 });
         }
 
@@ -1020,7 +1023,7 @@ public class RecordRepository extends AbstractRepository {
     @Getter
     @AllArgsConstructor
     public static class SearchState {
-        private final KafkaConsumer<byte[], byte[]> consumer;
+        private final List<KafkaConsumer<byte[], byte[]>> consumers;
         private final SearchEvent searchEvent;
     }
 
