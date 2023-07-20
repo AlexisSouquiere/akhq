@@ -213,7 +213,7 @@ class TopicData extends Root {
               true,
               self.state.sortBy === 'Oldest'
             );
-            self.setState({ messages: tableMessages });
+            self.setState({ messages: tableMessages, recordCount: tableMessages.length });
           }
         });
 

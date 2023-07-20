@@ -617,11 +617,10 @@ public class RecordRepository extends AbstractRepository {
                     KafkaConsumer<byte[], byte[]> consumer = this.kafkaModule.getConsumer(
                         options.clusterId,
                         new Properties() {{
-                            put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, String.valueOf(options.size));
+                            put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, maxPollRecords);
                         }}
                     );
 
-                    // Get poll start/end offset depending on the sort and options
                     Optional<OffsetBound> offsetBound =  getOffsetsForSortOldest(consumer, partition, options);
 
                     TopicPartition topicPartition = new TopicPartition(partition.getTopic(), partition.getId());
@@ -656,13 +655,13 @@ public class RecordRepository extends AbstractRepository {
                 ConsumerRecords<byte[], byte[]> records = this.poll(consumer);
 
                 if (records.isEmpty()) {
+                    // If we didn't poll any records, flag this partition as empty
                     currentEvent.emptyPoll.put(consumer.assignment().iterator().next().partition(), true);
                 }
 
                 for (ConsumerRecord<byte[], byte[]> record : records) {
-                    currentEvent.updateProgress(record);
-
                     Record current = newRecord(record, options, topic);
+                    // Check that the record matches the user filters
                     if (matchFilter(options, current)) {
                         list.add(current);
                         matchesCount.getAndIncrement();
@@ -678,14 +677,32 @@ public class RecordRepository extends AbstractRepository {
                 }
             });
 
-            currentEvent.records = list;
-
+            // No more records to poll in all the partitions
             if (!currentEvent.emptyPoll.containsValue(false)) {
                 emitter.onNext(currentEvent.end(searchEvent.getAfter()));
-            } else if (matchesCount.get() >= options.getSize()) {
+            }
+            // We got enough records
+            else if (matchesCount.get() >= options.getSize()) {
+                // Keep only the desired number of records, ordered by timestamp
+                currentEvent.records = list.stream()
+                    .sorted(Comparator.comparing(Record::getTimestamp))
+                    .limit(options.getSize())
+                    .collect(Collectors.toList());
+
+                consumers.forEach(consumer -> {
+                    int partition = consumer.assignment().iterator().next().partition();
+                    // Take the last record of the partition
+                    currentEvent.records.stream()
+                        .filter(r -> partition == r.getPartition())
+                        .reduce((first, second) -> second)
+                        .ifPresent(currentEvent::updateProgress);
+                });
+
                 currentEvent.emptyPoll.replaceAll((k, v) -> true);
                 emitter.onNext(currentEvent.progress(options));
-            } else {
+            }
+            // Otherwise, we continue to search
+            else {
                 emitter.onNext(currentEvent.progress(options));
             }
 
@@ -853,9 +870,9 @@ public class RecordRepository extends AbstractRepository {
         }
 
 
-        private void updateProgress(ConsumerRecord<byte[], byte[]> record) {
-            Offset offset = this.offsets.get(record.partition());
-            offset.current = record.offset();
+        private void updateProgress(Record record) {
+            Offset offset = this.offsets.get(record.getPartition());
+            offset.current = record.getOffset();
         }
 
         @AllArgsConstructor
