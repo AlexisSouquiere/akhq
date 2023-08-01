@@ -183,10 +183,10 @@ class TopicData extends Root {
             filters,
             changePage ? nextPage : undefined
           ),
-          sessionStorage.getItem('jwtToken')
+          localStorage.getItem('jwtToken')
             ? {
                 headers: {
-                  Authorization: 'Bearer ' + sessionStorage.getItem('jwtToken')
+                  Authorization: 'Bearer ' + localStorage.getItem('jwtToken')
                 }
               }
             : {}
@@ -711,6 +711,14 @@ class TopicData extends Root {
         {this._renderSearchFilter('headerValue', 'Header Value')}
         {this._renderSearchFilter('keySubject', 'Key Subject')}
         {this._renderSearchFilter('valueSubject', 'Value Subject')}
+
+        <p style={{ fontStyle: 'italic' }}>
+          * Whitespaces in search string are considered as separators for search patterns unless
+          enclosed with double quotes
+          <br />
+          In case of multiple patterns, OR operator is applied for Contains / Equals. AND is applied
+          for Not contains
+        </p>
 
         <div style={{ display: 'flex' }}>
           <button
