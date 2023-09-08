@@ -702,8 +702,9 @@ public class RecordRepository extends AbstractRepository {
                 currentEvent.emptyPoll.replaceAll((k, v) -> true);
                 emitter.onNext(currentEvent.progress(options));
             }
-            // Otherwise, we continue to search
+            // Otherwise, we return the records found and continue to search
             else {
+                currentEvent.records = list;
                 emitter.onNext(currentEvent.progress(options));
             }
 

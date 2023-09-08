@@ -139,6 +139,8 @@ class TopicData extends Root {
         if (query.get('single') !== null) {
           this._getSingleMessage(query.get('partition'), query.get('offset'));
           this.setState({ canDownload: true });
+        } else if (this.props.location.search.includes('searchBy')) {
+          this._startEventSource();
         } else {
           this._getMessages();
         }
@@ -168,7 +170,14 @@ class TopicData extends Root {
 
     let self = this;
     this.setState(
-      { messages: [], pageNumber: 1, percent: 0, isSearching: true, recordCount: 0 },
+      {
+        messages: [],
+        pageNumber: 1,
+        percent: 0,
+        isSearching: true,
+        recordCount: 0,
+        sortBy: 'Oldest'
+      },
       () => {
         const filters = this._buildFilters();
         if (changePage) {
@@ -587,6 +596,7 @@ class TopicData extends Root {
     for (let option of sortOptions) {
       renderedOptions.push(
         <Dropdown.Item
+          disabled={this.props.location.search.includes('searchBy')}
           key={option}
           onClick={() =>
             this.setState({ sortBy: option }, () => {
