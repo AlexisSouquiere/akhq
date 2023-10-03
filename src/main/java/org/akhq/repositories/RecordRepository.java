@@ -355,8 +355,10 @@ public class RecordRepository extends AbstractRepository {
     private Optional<OffsetBound> getOffsetsForSortNewest(KafkaConsumer<byte[], byte[]> consumer, Partition partition, Options options, int pollSizePerPartition) {
         return getFirstOffset(consumer, partition, options)
             .map(first -> {
-                // Take end offset - 1 to get the last record offset
-                long last = partition.getLastOffset() - 1;
+                // Take end offset to get the last record offset
+                long last = partition.getLastOffset() ;
+
+                log.debug("Partition : {} - Last offset : {}", partition.getId(), last);
 
                 // If there is an after parameter in the request use this one
                 if (pollSizePerPartition > 0 && options.after.containsKey(partition.getId())) {
@@ -614,6 +616,7 @@ public class RecordRepository extends AbstractRepository {
             List<KafkaConsumer<byte[], byte[]>> consumers = topic
                 .getPartitions()
                 .parallelStream()
+                .filter(partition -> options.partition == null || partition.getId() == options.partition)
                 .map(partition -> {
                     KafkaConsumer<byte[], byte[]> consumer = this.kafkaModule.getConsumer(
                         options.clusterId,
@@ -632,16 +635,15 @@ public class RecordRepository extends AbstractRepository {
                     return consumer;
                 })
                 .collect(Collectors.toList());
-            ;
-            return new SearchState(consumers,
-                new SearchEvent(topic));
+
+            return new SearchState(consumers, new SearchEvent(topic, options.partition));
         }, (searchState, emitter) -> {
             SearchEvent searchEvent = searchState.getSearchEvent();
             List<KafkaConsumer<byte[], byte[]>> consumers = searchState.getConsumers();
 
             // end
             if (searchEvent == null || !searchEvent.emptyPoll.containsValue(false)) {
-                emitter.onNext(new SearchEvent(topic).end(searchEvent != null ? searchEvent.after: null));
+                emitter.onNext(new SearchEvent(topic, null).end(searchEvent != null ? searchEvent.after: null));
                 emitter.onComplete();
                 consumers.forEach(KafkaConsumer::close);
 
@@ -652,11 +654,26 @@ public class RecordRepository extends AbstractRepository {
 
             List<Record> list = Collections.synchronizedList(new ArrayList<>());
 
-            consumers.forEach(consumer -> {
+            consumers.stream().parallel().forEach(consumer -> {
+                TopicPartition topicPartition = consumer.assignment().iterator().next();
+
+                if (currentEvent.emptyPoll.get(topicPartition.partition()))
+                    return;
+
+                long start = consumer.position(topicPartition);
                 ConsumerRecords<byte[], byte[]> records = this.poll(consumer);
 
-                if (records.isEmpty()) {
-                    // If we didn't poll any records, flag this partition as empty
+                log.debug(
+                    "Consume [topic: {}] [partition: {}] [start: {} - end: {}] [count: {}]",
+                    consumer.assignment().iterator().next().topic(),
+                    consumer.assignment().iterator().next().partition(),
+                    start,
+                    consumer.position(consumer.assignment().iterator().next()),
+                    records.count()
+                );
+
+                // If we are at the end of the partition, flag this partition as empty
+                if (consumer.position(topicPartition) == searchEvent.offsets.get(topicPartition.partition()).end) {
                     currentEvent.emptyPoll.put(consumer.assignment().iterator().next().partition(), true);
                 }
 
@@ -667,7 +684,7 @@ public class RecordRepository extends AbstractRepository {
                         list.add(current);
                         matchesCount.getAndIncrement();
 
-                        log.trace(
+                        log.info(
                             "Record [topic: {}] [partition: {}] [offset: {}] [key: {}]",
                             record.topic(),
                             record.partition(),
@@ -678,35 +695,46 @@ public class RecordRepository extends AbstractRepository {
                 }
             });
 
+            if (matchesCount.get() > 0) {
+                // We got enough records
+                if (matchesCount.get() >= options.getSize()) {
+                    // Keep only the desired number of records, ordered by timestamp
+                    currentEvent.records = list.stream()
+                        .sorted(Comparator.comparing(Record::getTimestamp))
+                        .limit(options.getSize())
+                        .collect(Collectors.toList());
+
+                    log.debug("Record match {}", currentEvent.records.size());
+
+                    consumers.forEach(consumer -> {
+                        int partition = consumer.assignment().iterator().next().partition();
+                        // Take the last record of the partition
+                        currentEvent.records.stream()
+                            .filter(r -> partition == r.getPartition())
+                            .reduce((first, second) -> second)
+                            .ifPresent(currentEvent::updateProgress);
+                    });
+
+                    currentEvent.emptyPoll.replaceAll((k, v) -> true);
+                    emitter.onNext(currentEvent.progress(options));
+                }
+                // Otherwise, we return the records found and continue to search
+                else {
+                    currentEvent.records = list;
+                    log.info("Record match {}", currentEvent.records.size());
+                    currentEvent.records.forEach(currentEvent::updateProgress);
+                    emitter.onNext(currentEvent.progress(options));
+                }
+            }
             // No more records to poll in all the partitions
-            if (!currentEvent.emptyPoll.containsValue(false)) {
+            else if (!currentEvent.emptyPoll.containsValue(false)) {
                 emitter.onNext(currentEvent.end(searchEvent.getAfter()));
             }
-            // We got enough records
-            else if (matchesCount.get() >= options.getSize()) {
-                // Keep only the desired number of records, ordered by timestamp
-                currentEvent.records = list.stream()
-                    .sorted(Comparator.comparing(Record::getTimestamp))
-                    .limit(options.getSize())
-                    .collect(Collectors.toList());
-
-                consumers.forEach(consumer -> {
-                    int partition = consumer.assignment().iterator().next().partition();
-                    // Take the last record of the partition
-                    currentEvent.records.stream()
-                        .filter(r -> partition == r.getPartition())
-                        .reduce((first, second) -> second)
-                        .ifPresent(currentEvent::updateProgress);
-                });
-
-                currentEvent.emptyPoll.replaceAll((k, v) -> true);
-                emitter.onNext(currentEvent.progress(options));
-            }
-            // Otherwise, we return the records found and continue to search
             else {
-                currentEvent.records = list;
                 emitter.onNext(currentEvent.progress(options));
             }
+
+            log.info("Percent {} - After {}", currentEvent.percent, currentEvent.after);
 
             return new SearchState(consumers, currentEvent);
         });
@@ -781,6 +809,7 @@ public class RecordRepository extends AbstractRepository {
         }
 
         return in.parallelStream()
+            .filter(Objects::nonNull)
             .anyMatch(s -> extractSearchPatterns(search)
                 .stream()
                 .anyMatch(s.toLowerCase()::contains));
@@ -858,11 +887,13 @@ public class RecordRepository extends AbstractRepository {
             this.emptyPoll = event.emptyPoll;
         }
 
-        private SearchEvent(Topic topic) {
+        private SearchEvent(Topic topic, Integer partition) {
             topic.getPartitions()
-                .forEach(partition -> {
-                    offsets.put(partition.getId(), new Offset(partition.getFirstOffset(), partition.getFirstOffset(), partition.getLastOffset()));
-                    emptyPoll.put(partition.getId(), false);
+                .stream()
+                .filter(p -> partition == null || p.getId() == partition)
+                .forEach(p -> {
+                    offsets.put(p.getId(), new Offset(p.getFirstOffset(), p.getFirstOffset(), p.getLastOffset()));
+                    emptyPoll.put(p.getId(), false);
                 });
         }
 
