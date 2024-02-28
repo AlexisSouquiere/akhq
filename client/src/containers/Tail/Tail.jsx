@@ -15,6 +15,7 @@ import Root from '../../components/Root';
 import DateTime from '../../components/DateTime';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import * as LosslessJson from 'lossless-json';
+import { withRouter } from '../../utils/withRouter';
 
 const STATUS = {
   STOPPED: 'STOPPED',
@@ -40,7 +41,7 @@ class Tail extends Root {
   eventSource;
 
   componentDidMount = async () => {
-    const { clusterId } = this.props.match.params;
+    const { clusterId } = this.props.params;
     const query = new URLSearchParams(this.props.location.search);
 
     let data = await this.getApi(uriTopicsName(clusterId));
@@ -70,7 +71,7 @@ class Tail extends Root {
   };
 
   initDateTimeFormat = async () => {
-    const { clusterId } = this.props.match.params;
+    const { clusterId } = this.props.params;
     const uiOptions = await getClusterUIOptions(clusterId);
     if (uiOptions.topicData && uiOptions.topicData.dateTimeFormat) {
       this.setState({
@@ -85,7 +86,7 @@ class Tail extends Root {
   };
 
   startEventSource = () => {
-    const { clusterId } = this.props.match.params;
+    const { clusterId } = this.props.params;
     const { search, selectedTopics, maxRecords } = this.state;
     this.eventSource = new EventSourcePolyfill(
       uriLiveTail(clusterId, search, selectedTopics, JSON.stringify(maxRecords)),
@@ -257,8 +258,8 @@ class Tail extends Root {
                 {selectedTopics.length === 0
                   ? 'Topics'
                   : selectedTopics.length === 1
-                  ? selectedTopics[0]
-                  : `${selectedTopics.length} Topics Selected`}
+                    ? selectedTopics[0]
+                    : `${selectedTopics.length} Topics Selected`}
               </Dropdown.Toggle>
               <Dropdown.Menu style={{ maxHeight: '771px', overflow: 'hidden', minHeight: '182px' }}>
                 <div className="bs-searchbox">
@@ -551,4 +552,4 @@ class Tail extends Root {
   }
 }
 
-export default Tail;
+export default withRouter(Tail);

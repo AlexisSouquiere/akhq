@@ -36,6 +36,7 @@ import Select from '../../../../components/Form/Select';
 import * as LosslessJson from 'lossless-json';
 import { Buffer } from 'buffer';
 import { EventSourcePolyfill } from 'event-source-polyfill';
+import { withRouter } from '../../../../utils/withRouter';
 
 class TopicData extends Root {
   state = {
@@ -113,7 +114,7 @@ class TopicData extends Root {
   };
 
   async _checkProps() {
-    const { clusterId, topicId } = this.props.match.params;
+    const { clusterId, topicId } = this.props.params;
     const query = new URLSearchParams(this.props.location.search);
     const uiOptions = await getClusterUIOptions(clusterId);
     this.setState(
@@ -124,8 +125,8 @@ class TopicData extends Root {
         sortBy: query.get('sort')
           ? query.get('sort')
           : uiOptions && uiOptions.topicData && uiOptions.topicData.sort
-          ? uiOptions.topicData.sort
-          : this.state.sortBy,
+            ? uiOptions.topicData.sort
+            : this.state.sortBy,
         partition: query.get('partition') ? query.get('partition') : this.state.partition,
         datetime: query.get('timestamp') ? new Date(query.get('timestamp')) : this.state.datetime,
         endDatetime: query.get('endTimestamp')
@@ -136,8 +137,8 @@ class TopicData extends Root {
         offsets: query.get('offset')
           ? this._getOffsetsByOffset(query.get('partition'), query.get('offset'))
           : query.get('after')
-          ? this._getOffsetsByAfterString(query.get('after'))
-          : this.state.offsets,
+            ? this._getOffsetsByAfterString(query.get('after'))
+            : this.state.offsets,
         dateTimeFormat:
           uiOptions && uiOptions.topicData && uiOptions.topicData.dateTimeFormat
             ? uiOptions.topicData.dateTimeFormat
@@ -473,7 +474,7 @@ class TopicData extends Root {
     setProduceToTopicValues(data);
 
     const { clusterId, topicId } = this.props.match.params;
-    this.props.history.push(`/ui/${clusterId}/topic/${topicId}/produce`);
+    this.props.router.navigate(`/ui/${clusterId}/topic/${topicId}/produce`);
   }
 
   _showDeleteModal = deleteMessage => {
@@ -601,7 +602,7 @@ class TopicData extends Root {
   _setUrlHistory(filters) {
     const { selectedCluster, selectedTopic } = this.state;
 
-    this.props.history.push({
+    this.props.router.navigate({
       pathname: `/ui/${selectedCluster}/topic/${selectedTopic}/data`,
       search: filters
     });
@@ -612,7 +613,7 @@ class TopicData extends Root {
 
     this.getApi(uriSchemaId(selectedCluster, id, selectedTopic)).then(response => {
       if (response.data) {
-        this.props.history.push({
+        this.props.router.navigate({
           pathname: `/ui/${selectedCluster}/schema/details/${response.data.subject}`,
           schemaId: response.data.subject
         });
@@ -1331,4 +1332,4 @@ class TopicData extends Root {
   }
 }
 
-export default TopicData;
+export default withRouter(TopicData);

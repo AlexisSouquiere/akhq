@@ -4,6 +4,7 @@ import * as constants from '../../utils/constants';
 import './styles.scss';
 import Spinner from '../Spinner';
 import { Link } from 'react-router-dom';
+import { withRouter } from '../../utils/withRouter';
 
 class Table extends Component {
   state = {
@@ -131,12 +132,12 @@ class Table extends Component {
   }
 
   onDoubleClick(onDetails, row) {
-    const { history, idCol } = this.props;
+    const { router, idCol } = this.props;
 
     if (onDetails) {
       let url = onDetails(idCol ? row[this.props.idCol] : row.id, row);
       if (url) {
-        history.push({
+        router.navigate({
           pathname: url,
           internal: row.internal
         });
@@ -536,8 +537,8 @@ class Table extends Component {
             {loading
               ? this.renderLoading()
               : data && data.length > 0
-              ? allItemRows
-              : this.renderNoContent()}
+                ? allItemRows
+                : this.renderNoContent()}
           </tbody>
         </table>
       </div>
@@ -585,7 +586,7 @@ Table.propTypes = {
   handleExtraExpand: PropTypes.func,
   handleExtraCollapse: PropTypes.func,
   loading: PropTypes.bool,
-  history: PropTypes.object,
+  router: PropTypes.object,
   rowId: PropTypes.func,
 
   updateData: PropTypes.func,
@@ -596,4 +597,4 @@ Table.propTypes = {
   noStripes: PropTypes.bool
 };
 
-export default Table;
+export default withRouter(Table);

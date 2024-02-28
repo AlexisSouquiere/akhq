@@ -1,6 +1,7 @@
 import React from 'react';
 
-import { Link, withRouter } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { withRouter } from '../../utils/withRouter';
 import { organizeRoles } from '../../utils/converters';
 import { logout } from '../../utils/api';
 import { uriCurrentUser, uriLogout } from '../../utils/endpoints';

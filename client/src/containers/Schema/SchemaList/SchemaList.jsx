@@ -17,6 +17,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Root from '../../../components/Root';
 import { handlePageChange, getPageNumber } from './../../../utils/pagination';
+import { withRouter } from '../../../utils/withRouter';
 
 class SchemaList extends Root {
   state = {
@@ -42,7 +43,7 @@ class SchemaList extends Root {
   };
 
   componentDidMount() {
-    let { clusterId } = this.props.match.params;
+    let { clusterId } = this.props.params;
     const { searchData, pageNumber } = this.state;
     const query = new URLSearchParams(this.props.location.search);
 
@@ -91,7 +92,7 @@ class SchemaList extends Root {
     if (data.results) {
       this.handleSchemaRegistry(data.results);
       this.setState({ selectedCluster, totalPageNumber: data.page }, () => {
-        this.props.history.push({
+        this.props.router.navigate({
           pathname: `/ui/${this.state.selectedCluster}/schema`,
           search: `search=${this.state.searchData.search}&page=${pageNumber}`
         });
@@ -117,8 +118,8 @@ class SchemaList extends Root {
           schema.schemaType === 'PROTOBUF'
             ? schema.schema
             : schema.schema
-            ? JSON.stringify(JSON.parse(schema.schema), null, 2)
-            : null
+              ? JSON.stringify(JSON.parse(schema.schema), null, 2)
+              : null
       });
     });
     this.setState({ schemasRegistry: tableSchemaRegistry, loading: false });
@@ -163,7 +164,7 @@ class SchemaList extends Root {
     const { selectedCluster, searchData, pageNumber, totalPageNumber, loading } = this.state;
     const roles = this.state.roles || {};
     const { history } = this.props;
-    const { clusterId } = this.props.match.params;
+    const { clusterId } = this.props.params;
 
     return (
       <div>
@@ -327,4 +328,4 @@ class SchemaList extends Root {
   }
 }
 
-export default SchemaList;
+export default withRouter(SchemaList);

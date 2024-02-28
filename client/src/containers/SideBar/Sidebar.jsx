@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Link, withRouter } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { matchPath } from 'react-router';
 import constants from '../../utils/constants';
 import sortBy from 'lodash/sortBy';
 import './styles.scss';
 import SideNav, { NavIcon, NavItem, NavText } from '@trendmicro/react-sidenav';
 import '@trendmicro/react-sidenav/dist/react-sidenav.css';
+import { withRouter } from '../../utils/withRouter';
 
 class Sidebar extends Component {
   state = {
@@ -57,11 +58,14 @@ class Sidebar extends Component {
   }
 
   handleGetClusters(clusters, callback = () => {}) {
-    const match = matchPath(this.props.history.location.pathname, {
-      path: '/ui/:clusterId/',
-      exact: false,
-      strict: false
-    });
+    const match = matchPath(
+      {
+        path: '/ui/:clusterId/',
+        exact: false,
+        strict: false
+      },
+      this.props.location.pathname
+    );
 
     const clusterId = match ? match.params.clusterId || '' : '';
     const allClusters = sortBy(clusters || [], cluster => cluster.id);
@@ -241,9 +245,8 @@ class Sidebar extends Component {
         className={pathname.includes(tab) ? 'active' : ''}
         onClick={() => {
           this.setState({ selectedTab: tab });
-          this.props.history.push({
-            pathname: `/ui/${selectedCluster}/${tab}`
-          });
+          /* eslint-disable react/prop-types */
+          this.props.router.navigate(`/ui/${selectedCluster}/${tab}`);
           return false;
         }}
       >
