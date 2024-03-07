@@ -1,7 +1,6 @@
 import React from 'react';
 import Dropdown from 'react-bootstrap/Dropdown';
 import ProgressBar from 'react-bootstrap/ProgressBar';
-import './styles.scss';
 import Table from '../../../../components/Table/Table';
 import { formatDateTime } from '../../../../utils/converters';
 import {
@@ -37,6 +36,7 @@ import * as LosslessJson from 'lossless-json';
 import { Buffer } from 'buffer';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import { withRouter } from '../../../../utils/withRouter';
+import { Badge } from 'react-bootstrap';
 
 class TopicData extends Root {
   state = {
@@ -840,10 +840,7 @@ class TopicData extends Root {
     ];
     return (
       <React.Fragment>
-        <nav
-          className="navbar navbar-expand-lg navbar-light bg-light
-         mr-auto khq-data-filter khq-sticky khq-nav"
-        >
+        <nav className="navbar navbar-expand-lg mr-auto khq-data-filter khq-sticky khq-nav">
           <button
             className="navbar-toggler"
             type="button"
@@ -859,37 +856,12 @@ class TopicData extends Root {
             <span className="navbar-toggler-icon" />
           </button>
 
-          <nav className="pagination-data">
-            <div>
-              <Pagination
-                pageNumber={pageNumber}
-                totalRecords={recordCount}
-                totalPageNumber={messages.length === 0 ? pageNumber : undefined}
-                onChange={({ currentTarget: input }) => {
-                  this.setState({ pageNumber: input.value });
-                }}
-                onSubmit={() => {
-                  this.setState(
-                    {
-                      pageNumber: pageNumber + 1
-                    },
-                    () => {
-                      this._searchMessages(true);
-                    }
-                  );
-                }}
-                editPageNumber={false}
-                showTotalPageNumber={false}
-              />
-            </div>
-          </nav>
-
           <div className={`collapse navbar-collapse ${showFilters}`} id="topic-data">
             <ul className="navbar-nav mr-auto">
               <li className="nav-item dropdown">
                 <Dropdown>
                   <Dropdown.Toggle className="nav-link dropdown-toggle">
-                    <strong>Sort:</strong> ({sortBy})
+                    Sort: ({sortBy})
                   </Dropdown.Toggle>
                   {!loading && <Dropdown.Menu>{this._renderSortOptions()}</Dropdown.Menu>}
                 </Dropdown>
@@ -897,7 +869,7 @@ class TopicData extends Root {
               <li className="nav-item dropdown">
                 <Dropdown>
                   <Dropdown.Toggle className="nav-link dropdown-toggle">
-                    <strong>Partition:</strong> ({partition})
+                    Partition: ({partition})
                   </Dropdown.Toggle>
                   {!loading && (
                     <Dropdown.Menu>
@@ -911,7 +883,7 @@ class TopicData extends Root {
               <li className="nav-item dropdown">
                 <Dropdown>
                   <Dropdown.Toggle className="nav-link dropdown-toggle">
-                    <strong>Timestamp UTC:</strong>
+                    Timestamp UTC:
                     {datetime !== '' &&
                       ' From ' +
                         formatDateTime(
@@ -986,16 +958,14 @@ class TopicData extends Root {
               <li className="nav-item dropdown">
                 <Dropdown>
                   <Dropdown.Toggle className="nav-link dropdown-toggle">
-                    <strong>Search:</strong> {this._renderCurrentSearchText()}
+                    Search: {this._renderCurrentSearchText()}
                   </Dropdown.Toggle>
                   {!loading && <Dropdown.Menu>{this._renderSearchGroup()}</Dropdown.Menu>}
                 </Dropdown>
               </li>
               <li className="nav-item dropdown">
                 <Dropdown>
-                  <Dropdown.Toggle className="nav-link dropdown-toggle">
-                    <strong>Offsets:</strong>
-                  </Dropdown.Toggle>
+                  <Dropdown.Toggle className="nav-link dropdown-toggle">Offsets:</Dropdown.Toggle>
                   {!loading && (
                     <Dropdown.Menu>
                       <div style={{ minWidth: '300px' }} className="khq-offset-navbar">
@@ -1032,7 +1002,7 @@ class TopicData extends Root {
               <li>
                 <Dropdown>
                   <Dropdown.Toggle className="nav-link dropdown-toggle">
-                    <strong>Time Format:</strong> ({this.state.dateTimeFormat})
+                    Time Format: ({this.state.dateTimeFormat})
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
                     <Dropdown.Item
@@ -1078,6 +1048,31 @@ class TopicData extends Root {
               </li>
             </ul>
           </div>
+
+          <nav className="pagination-data">
+            <div>
+              <Pagination
+                pageNumber={pageNumber}
+                totalRecords={recordCount}
+                totalPageNumber={messages.length === 0 ? pageNumber : undefined}
+                onChange={({ currentTarget: input }) => {
+                  this.setState({ pageNumber: input.value });
+                }}
+                onSubmit={() => {
+                  this.setState(
+                    {
+                      pageNumber: pageNumber + 1
+                    },
+                    () => {
+                      this._searchMessages(true);
+                    }
+                  );
+                }}
+                editPageNumber={false}
+                showTotalPageNumber={false}
+              />
+            </div>
+          </nav>
         </nav>
         {isSearching && <ProgressBar style={{ height: '0.3rem' }} animated now={percent} />}
         <div className="table-responsive">
@@ -1210,8 +1205,8 @@ class TopicData extends Root {
                   return (
                     <div className="justify-items">
                       {obj[col.accessor].key !== undefined && (
-                        <span
-                          className="badge badge-primary clickable"
+                        <Badge
+                          bg="primary"
                           onClick={
                             obj[col.accessor].registryType !== 'GLUE'
                               ? () => {
@@ -1221,12 +1216,12 @@ class TopicData extends Root {
                           }
                         >
                           Key: {obj[col.accessor].key}
-                        </span>
+                        </Badge>
                       )}
 
                       {obj[col.accessor].value !== undefined && (
-                        <span
-                          className="badge badge-primary clickable schema-value"
+                        <Badge
+                          bg="primary"
                           onClick={
                             obj[col.accessor].registryType !== 'GLUE'
                               ? () => {
@@ -1236,7 +1231,7 @@ class TopicData extends Root {
                           }
                         >
                           Value: {obj[col.accessor].value}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   );

@@ -42,10 +42,15 @@ class Header extends Root {
       sessionStorage.setItem('roles', organizeRoles(currentUserData.roles));
       localStorage.removeItem('jwtToken');
       this.setState({ login: currentUserData.logged }, () => {
-        this.props.history.replace({
-          pathname: '/ui/login',
-          ...this.props.history
-        });
+        this.props.router.navigate(
+          {
+            pathname: '/ui/login',
+            ...this.props.history
+          },
+          {
+            replace: true
+          }
+        );
         window.location.reload(false);
         toast.success('Logged out successfully');
       });

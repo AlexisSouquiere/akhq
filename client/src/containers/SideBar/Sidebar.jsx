@@ -8,6 +8,7 @@ import './styles.scss';
 import SideNav, { NavIcon, NavItem, NavText } from '@trendmicro/react-sidenav';
 import '@trendmicro/react-sidenav/dist/react-sidenav.css';
 import { withRouter } from '../../utils/withRouter';
+import Dropdown from 'react-bootstrap/Dropdown';
 
 class Sidebar extends Component {
   state = {
@@ -61,8 +62,8 @@ class Sidebar extends Component {
     const match = matchPath(
       {
         path: '/ui/:clusterId/',
-        exact: false,
-        strict: false
+        end: false,
+        caseSensitive: false
       },
       this.props.location.pathname
     );
@@ -147,12 +148,7 @@ class Sidebar extends Component {
         <NavText style={{ color: '#32a9d4' }}>
           {' '}
           <Link to={`/ui/${cluster.id}/topic`}>
-            <div
-              className={selectedCluster === cluster.id ? ' active' : ''}
-              style={{ color: '#759dac' }}
-            >
-              {cluster.id}
-            </div>
+            <div className={selectedCluster === cluster.id ? ' active' : ''}>{cluster.id}</div>
           </Link>
         </NavText>
       </NavItem>
@@ -165,12 +161,7 @@ class Sidebar extends Component {
       >
         <NavText>
           <Link to={`/ui/${selectedCluster}/connect/${connect}`}>
-            <div
-              className={selectedConnect === connect ? ' active' : ''}
-              style={{ color: '#759dac' }}
-            >
-              {connect}
-            </div>
+            <div>{connect}</div>
           </Link>
         </NavText>
       </NavItem>
@@ -184,12 +175,7 @@ class Sidebar extends Component {
       >
         <NavText>
           <Link to={`/ui/${selectedCluster}/ksqldb/${ksqlDB}`}>
-            <div
-              className={selectedKsqlDB === ksqlDB ? ' active' : ''}
-              style={{ color: '#759dac' }}
-            >
-              {ksqlDB}
-            </div>
+            <div>{ksqlDB}</div>
           </Link>
         </NavText>
       </NavItem>
@@ -206,7 +192,7 @@ class Sidebar extends Component {
       },
       () => {
         const { selectedCluster } = this.state;
-        this.props.history.push({
+        this.props.router.navigate({
           pathname: `/ui/${selectedCluster}/topic`,
           selectedCluster
         });
@@ -219,7 +205,7 @@ class Sidebar extends Component {
   changeSelectedConnect(connect) {
     this.setState({ selectedConnect: connect, showConnects: false }, () => {
       const { selectedConnect, selectedCluster } = this.state;
-      this.props.history.push({
+      this.props.router.navigate({
         pathname: `/ui/${selectedCluster}/connect/${selectedConnect}`,
         selectedCluster
       });
@@ -229,7 +215,7 @@ class Sidebar extends Component {
   changeSelectedKsqlDB(ksqlDB) {
     this.setState({ selectedKsqlDB: ksqlDB, showKsqlDBs: false }, () => {
       const { selectedKsqlDB, selectedCluster } = this.state;
-      this.props.history.push({
+      this.props.router.navigate({
         pathname: `/ui/${selectedCluster}/ksqldb/${selectedKsqlDB}`,
         selectedCluster
       });
@@ -309,7 +295,7 @@ class Sidebar extends Component {
           <span className="logo" />
         </div>
         <SideNav.Nav defaultSelected={`${constants.TOPIC}`} style={{ background: 'black' }}>
-          <NavItem style={{ backgroundColor: 'Black', cursor: 'default' }}>
+          <NavItem>
             <NavIcon />
             <NavText
               style={{
@@ -322,7 +308,7 @@ class Sidebar extends Component {
               {tag}
             </NavText>
           </NavItem>
-          <NavItem eventKey="cluster">
+          <NavItem className="nav-clusters" eventKey="cluster">
             <NavIcon>
               <i className="fa fa-fw fa fa-database" aria-hidden="true" />
             </NavIcon>
@@ -335,11 +321,14 @@ class Sidebar extends Component {
                   this.setState({ showClusters: !showClusters, selectedTab: constants.CLUSTER });
                 }}
               >
-                <span className="badge badge-primary clusters">{selectedCluster}</span>
+                <span className="clusters">{selectedCluster}</span>
               </div>
             </NavText>
             {listClusters}
           </NavItem>
+
+          <Dropdown.Divider />
+
           {roles &&
             roles.NODE &&
             roles.NODE.includes('READ') &&
@@ -384,7 +373,7 @@ class Sidebar extends Component {
                     this.setState({ showConnects: !showConnects, selectedTab: constants.CONNECT });
                   }}
                 >
-                  <span className="badge badge-primary clusters">{selectedConnect}</span>
+                  <span className="clusters">{selectedConnect}</span>
                 </div>
               </NavText>
 
@@ -409,7 +398,7 @@ class Sidebar extends Component {
                     this.setState({ showKsqlDBs: !showKsqlDBs, selectedTab: constants.KSQLDB });
                   }}
                 >
-                  <span className="badge badge-primary clusters">{selectedKsqlDB}</span>
+                  <span className="clusters">{selectedKsqlDB}</span>
                 </div>
               </NavText>
 
@@ -424,6 +413,7 @@ class Sidebar extends Component {
 }
 
 Sidebar.propTypes = {
+  router: PropTypes.object,
   history: PropTypes.object,
   match: PropTypes.object,
   location: PropTypes.object,

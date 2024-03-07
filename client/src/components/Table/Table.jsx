@@ -5,6 +5,7 @@ import './styles.scss';
 import Spinner from '../Spinner';
 import { Link } from 'react-router-dom';
 import { withRouter } from '../../utils/withRouter';
+import { Table as BootstrapTable } from 'react-bootstrap';
 
 class Table extends Component {
   state = {
@@ -267,7 +268,7 @@ class Table extends Component {
           }}
           key={'row-expanded-' + row.id}
         >
-          <td style={{ backgroundColor: '#171819' }} colSpan={this.colspan()}>
+          <td colSpan={this.colspan()}>
             {' '}
             {extraExpanded &&
             JSON.stringify(
@@ -511,7 +512,7 @@ class Table extends Component {
   }
 
   render() {
-    const { noStripes, loading, rowId } = this.props;
+    const { loading, rowId } = this.props;
     let allItemRows = [];
     let data = this.props.data || [];
 
@@ -527,11 +528,9 @@ class Table extends Component {
       allItemRows = allItemRows.concat(perItemRows);
     });
 
-    const stripesStyle = noStripes ? 'no-stripes' : 'table-striped';
-
     return (
       <div className="table-responsive">
-        <table className={`table table-bordered table-hover mb-0 ${stripesStyle}`}>
+        <BootstrapTable bordered hover>
           {this.renderHeader()}
           <tbody>
             {loading
@@ -540,7 +539,7 @@ class Table extends Component {
                 ? allItemRows
                 : this.renderNoContent()}
           </tbody>
-        </table>
+        </BootstrapTable>
       </div>
     );
   }

@@ -169,10 +169,7 @@ class SchemaList extends Root {
     return (
       <div>
         <Header title="Schema Registry" history={history} />
-        <nav
-          className="navbar navbar-expand-lg navbar-light bg-light mr-auto
-         khq-data-filter khq-sticky khq-nav"
-        >
+        <nav className="navbar navbar-expand-lg mr-auto khq-data-filter khq-sticky khq-nav">
           <SearchBar
             showSearch={true}
             search={searchData.search}
@@ -304,7 +301,7 @@ class SchemaList extends Root {
           noContent={'No schemas available'}
         />
         {roles.SCHEMA && roles.SCHEMA.includes('CREATE') && (
-          <aside>
+          <footer>
             <Link
               to={{
                 pathname: `/ui/${clusterId}/schema/create`,
@@ -314,7 +311,7 @@ class SchemaList extends Root {
             >
               Create a Subject
             </Link>
-          </aside>
+          </footer>
         )}
 
         <ConfirmModal

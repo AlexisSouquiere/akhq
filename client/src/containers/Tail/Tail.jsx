@@ -16,6 +16,7 @@ import DateTime from '../../components/DateTime';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import * as LosslessJson from 'lossless-json';
 import { withRouter } from '../../utils/withRouter';
+import { Button } from 'react-bootstrap';
 
 const STATUS = {
   STOPPED: 'STOPPED',
@@ -219,11 +220,8 @@ class Tail extends Root {
     return (
       <div>
         <Header title="Live Tail" history={this.props.history} />
-        <nav
-          className="navbar navbar-expand-lg navbar-light
-        bg-light mr-auto khq-data-filter khq-sticky khq-nav"
-        >
-          <button
+        <nav className="navbar navbar-expand-lg mr-auto khq-data-filter khq-sticky khq-nav">
+          <Button
             className="navbar-toggler"
             type="button"
             data-toggle="collapse"
@@ -236,7 +234,7 @@ class Tail extends Root {
             }}
           >
             <span className="navbar-toggler-icon" />
-          </button>
+          </Button>
           <div className={`form-inline collapse navbar-collapse ${showFilters}`} id="navbar-search">
             <Input
               type="text"

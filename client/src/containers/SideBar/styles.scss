@@ -1,4 +1,6 @@
-@import '../../css/init';
+@import '~bootstrap/scss/functions';
+@import '~bootstrap/scss/mixins';
+@import '~bootstrap/scss/variables';
 
 $sidebarWidth: 70px;
 $sidebarExpandedWidth: 250px;
@@ -6,7 +8,7 @@ $sidebarTransition: 0.5s;
 
 .sidenav---sidenav---_2tBP {
   .logo-wrapper {
-    background: $tertiary;
+    background: #005f81;
     border-bottom: 4px solid $yellow;
     padding-bottom: 10px;
     padding-top: 1px;
@@ -21,6 +23,9 @@ $sidebarTransition: 0.5s;
     margin-left: 4px;
     margin-right: 4px;
     transition: all 0.2s ease;
+  }
+  hr {
+    border: 1px solid white;
   }
 }
 
@@ -44,6 +49,34 @@ $sidebarTransition: 0.5s;
 }
 
 .sidenav---sidenav-subnav---1EN61 {
+  background-color: $gray-900 !important;
   max-height: calc(30vh);
   overflow: auto !important;
+}
+
+.sidenav---navtext---1AE_f {
+  a {
+    text-decoration: none;
+    color: $gray-100;
+  }
+  .active {
+    color: $yellow;
+    font-weight: bold;
+  }
+}
+
+.sidenav---sidenav-navitem---uwIJ- {
+  &:hover {
+    background-color: $gray-700;
+  }
+  &.active  {
+    background-color: $gray-700;
+  }
+  &.nav-clusters {
+    background-color: $gray-900;
+
+    span {
+      color: $warning;
+    }
+  }
 }

@@ -349,8 +349,8 @@ class AkhqRoutes extends Root {
         return (
           <Routes>
             <Route exact path="/ui/login" element={<Login />} />
-            <Navigate from="/ui" to={'/ui/login'} />
-            <Navigate from="/" to={'/ui/login'} />
+            <Route path="/ui" element={<Navigate to="/ui/login" replace />} />
+            <Route path="/*" element={<Login />} />
           </Routes>
         );
       }
