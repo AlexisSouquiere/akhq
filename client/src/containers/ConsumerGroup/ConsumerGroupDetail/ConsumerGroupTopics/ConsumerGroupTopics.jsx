@@ -52,7 +52,6 @@ class ConsumerGroupTopics extends Root {
       <div>
         <Table
           loading={loading}
-          history={this.props.history}
           columns={[
             {
               id: 'name',
@@ -62,7 +61,7 @@ class ConsumerGroupTopics extends Root {
               sortable: true,
               cell: (obj, col) => {
                 return (
-                  <Link to={`/ui/${this.state.selectedCluster}/topic/${obj[col.accessor]}`}>
+                  <Link to={`/ui/${this.state.selectedCluster}/topic/${obj[col.accessor]}/data`}>
                     {obj[col.accessor]}
                   </Link>
                 );

@@ -24,7 +24,6 @@ class ConsumerGroupList extends Root {
     deleteData: {},
     pageNumber: 1,
     totalPageNumber: 1,
-    history: this.props,
     search: '',
     roles: JSON.parse(sessionStorage.getItem('roles')),
     loading: true
@@ -124,7 +123,7 @@ class ConsumerGroupList extends Root {
 
       return (
         <Link
-          to={`/ui/${this.state.selectedCluster}/topic/${topicId}`}
+          to={`/ui/${this.state.selectedCluster}/topic/${topicId}/data`}
           key={group + '-' + topicId}
           className="btn btn-dark btn-sm mb-1 mr-1"
           onClick={noPropagation}
@@ -170,11 +169,10 @@ class ConsumerGroupList extends Root {
   render() {
     const { selectedCluster, search, pageNumber, totalPageNumber, loading } = this.state;
     const roles = this.state.roles || {};
-    const { history } = this.props;
 
     return (
       <div>
-        <Header title="Consumer Groups" history={history} />
+        <Header title="Consumer Groups" />
         <nav className="navbar navbar-expand-lg mr-auto khq-data-filter khq-sticky khq-nav">
           <SearchBar
             showSearch={true}
@@ -197,7 +195,6 @@ class ConsumerGroupList extends Root {
 
         <Table
           loading={loading}
-          history={this.props.history}
           columns={[
             {
               id: 'id',

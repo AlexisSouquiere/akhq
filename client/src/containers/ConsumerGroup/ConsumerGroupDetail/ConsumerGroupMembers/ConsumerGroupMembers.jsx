@@ -51,7 +51,6 @@ class ConsumerGroupMembers extends Root {
   }
 
   handleAssignments(assignments) {
-    const { history } = this.props;
     let topics = [];
 
     if (assignments) {
@@ -73,15 +72,15 @@ class ConsumerGroupMembers extends Root {
         <div
           key={i}
           onClick={() => {
-            history.push({
-              pathname: `/ui/${this.state.selectedCluster}/topic/${topic}`,
+            this.props.router.navigate({
+              pathname: `/ui/${this.state.selectedCluster}/topic/${topic}/data`,
               tab: constants.TOPIC
             });
           }}
         >
           <Link
             to={{
-              pathname: `/ui/${this.state.selectedCluster}/topic/${topic}`
+              pathname: `/ui/${this.state.selectedCluster}/topic/${topic}/data`
             }}
             key="topic"
             className="btn btn-primary btn-sm mb-1"
@@ -100,7 +99,6 @@ class ConsumerGroupMembers extends Root {
       <div>
         <Table
           loading={loading}
-          history={this.props.history}
           columns={[
             {
               id: 'clientId',

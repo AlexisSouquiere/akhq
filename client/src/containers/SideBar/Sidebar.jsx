@@ -8,7 +8,6 @@ import './styles.scss';
 import SideNav, { NavIcon, NavItem, NavText } from '@trendmicro/react-sidenav';
 import '@trendmicro/react-sidenav/dist/react-sidenav.css';
 import { withRouter } from '../../utils/withRouter';
-import Dropdown from 'react-bootstrap/Dropdown';
 
 class Sidebar extends Component {
   state = {
@@ -410,8 +409,6 @@ class Sidebar extends Component {
 
 Sidebar.propTypes = {
   router: PropTypes.object,
-  history: PropTypes.object,
-  match: PropTypes.object,
   location: PropTypes.object,
   clusters: PropTypes.array,
   children: PropTypes.any,

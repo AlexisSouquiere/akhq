@@ -44,7 +44,6 @@ class AkhqRoutes extends Root {
   };
   static propTypes = {
     location: PropTypes.object,
-    history: PropTypes.object,
     clusterId: PropTypes.string,
     clusters: PropTypes.array
   };

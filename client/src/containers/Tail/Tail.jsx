@@ -218,7 +218,7 @@ class Tail extends Root {
 
     return (
       <div>
-        <Header title="Live Tail" history={this.props.history} />
+        <Header title="Live Tail" />
         <div className="navbar navbar-expand-lg mr-auto khq-data-filter khq-sticky khq-nav">
           <BootstrapForm className="form-inline mr-auto khq-form-get">
             <Row>
@@ -394,7 +394,6 @@ class Tail extends Root {
         </div>
         {selectedStatus !== STATUS.STOPPED && (
           <Table
-            history={this.props.history}
             rowId={data => {
               return data.topic.name + '-' + data.partition + '-' + data.offset;
             }}
