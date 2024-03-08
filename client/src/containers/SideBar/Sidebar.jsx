@@ -293,21 +293,19 @@ class Sidebar extends Component {
         <SideNav.Toggle />
         <div className="logo-wrapper">
           <span className="logo" />
+          <p
+            style={{
+              color: 'white',
+              fontStyle: 'Italic',
+              textAlign: 'center',
+              margin: '20px 0 0 0'
+            }}
+          >
+            {''}
+            {tag}
+          </p>
         </div>
         <SideNav.Nav defaultSelected={`${constants.TOPIC}`} style={{ background: 'black' }}>
-          <NavItem>
-            <NavIcon />
-            <NavText
-              style={{
-                color: 'grey',
-                fontStyle: 'Italic',
-                paddingLeft: '9%'
-              }}
-            >
-              {''}
-              {tag}
-            </NavText>
-          </NavItem>
           <NavItem className="nav-clusters" eventKey="cluster">
             <NavIcon>
               <i className="fa fa-fw fa fa-database" aria-hidden="true" />
@@ -326,8 +324,6 @@ class Sidebar extends Component {
             </NavText>
             {listClusters}
           </NavItem>
-
-          <Dropdown.Divider />
 
           {roles &&
             roles.NODE &&

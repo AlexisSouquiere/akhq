@@ -83,7 +83,7 @@ class ConnectList extends Root {
     if (data.results) {
       this.handleData(data);
       this.setState({ selectedCluster: clusterId, totalPageNumber: data.page }, () => {
-        this.props.history.push({
+        this.props.router.navigate({
           pathname: `/ui/${this.state.clusterId}/connect/${this.state.connectId}`,
           search: `search=${this.state.searchData.search}&page=${pageNumber}`
         });

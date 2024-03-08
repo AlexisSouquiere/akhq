@@ -24,9 +24,6 @@ $sidebarTransition: 0.5s;
     margin-right: 4px;
     transition: all 0.2s ease;
   }
-  hr {
-    border: 1px solid white;
-  }
 }
 
 .sidenav---expanded---1KdUL {
@@ -49,7 +46,7 @@ $sidebarTransition: 0.5s;
 }
 
 .sidenav---sidenav-subnav---1EN61 {
-  background-color: $gray-900 !important;
+  background-color: $gray-600 !important;
   max-height: calc(30vh);
   overflow: auto !important;
 }
@@ -60,23 +57,19 @@ $sidebarTransition: 0.5s;
     color: $gray-100;
   }
   .active {
-    color: $yellow;
+    color: #005f81;
     font-weight: bold;
   }
 }
 
 .sidenav---sidenav-navitem---uwIJ- {
   &:hover {
-    background-color: $gray-700;
+    background-color: $body-bg-dark;
   }
   &.active  {
-    background-color: $gray-700;
+    background-color: $body-bg-dark;
   }
   &.nav-clusters {
-    background-color: $gray-900;
-
-    span {
-      color: $warning;
-    }
+    background-color: $gray-600;
   }
 }
