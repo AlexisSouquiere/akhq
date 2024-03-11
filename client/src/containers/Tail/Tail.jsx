@@ -218,180 +218,178 @@ class Tail extends Root {
 
     return (
       <div>
-        <Header title="Live Tail" />
-        <div className="navbar navbar-expand-lg mr-auto khq-data-filter khq-sticky khq-nav">
-          <BootstrapForm className="form-inline mr-auto khq-form-get">
-            <Row>
-              <Col>
-                <Input
-                  type="text"
-                  name="search"
-                  id="search"
-                  value={search}
-                  label={''}
-                  placeholder={'Search...'}
-                  onChange={e => {
-                    this.onStop();
-                    this.setState({ data: [] });
-                    this.handleChange(e);
-                  }}
-                  wrapperClass={'tail-search-wrapper'}
-                  inputClass={'tail-search-input'}
-                />
-              </Col>
-              <Col>
-                <Dropdown className="form-group dropdown bootstrap-select show-tick khq-select show">
-                  <Dropdown.Toggle className="btn dropdown-toggle btn-white">
-                    {selectedTopics.length === 0
-                      ? 'Topics'
-                      : selectedTopics.length === 1
-                        ? selectedTopics[0]
-                        : `${selectedTopics.length} Topics Selected`}
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu
-                    style={{ maxHeight: '771px', overflow: 'hidden', minHeight: '182px' }}
-                  >
-                    <div className="bs-searchbox">
-                      <input
-                        type="text"
-                        name="dropdownSearch"
-                        id="dropdownSearch"
-                        className="form-control"
-                        autoComplete="off"
-                        role="combobox"
-                        aria-label="Search"
-                        aria-controls="bs-select-1"
-                        aria-autocomplete="list"
-                        aria-expanded="false"
-                        placeholder={'search'}
-                        onChange={this.handleChange}
-                        value={dropdownSearch}
-                      />
+        <Header title="Live Tail" history={this.props.history} />
+        <BootstrapForm>
+          <Row>
+            <Col xs={2}>
+              <Input
+                type="text"
+                name="search"
+                id="search"
+                value={search}
+                label={''}
+                placeholder={'Search...'}
+                onChange={e => {
+                  this.onStop();
+                  this.setState({ data: [] });
+                  this.handleChange(e);
+                }}
+                wrapperClass={'tail-search-wrapper'}
+                inputClass={'tail-search-input'}
+              />
+            </Col>
+            <Col xs="auto">
+              <Dropdown className="form-group dropdown bootstrap-select show-tick khq-select show">
+                <Dropdown.Toggle className="btn dropdown-toggle btn-white">
+                  {selectedTopics.length === 0
+                    ? 'Topics'
+                    : selectedTopics.length === 1
+                      ? selectedTopics[0]
+                      : `${selectedTopics.length} Topics Selected`}
+                </Dropdown.Toggle>
+                <Dropdown.Menu
+                  style={{ maxHeight: '771px', overflow: 'hidden', minHeight: '182px' }}
+                >
+                  <div className="bs-searchbox">
+                    <input
+                      type="text"
+                      name="dropdownSearch"
+                      id="dropdownSearch"
+                      className="form-control"
+                      autoComplete="off"
+                      role="combobox"
+                      aria-label="Search"
+                      aria-controls="bs-select-1"
+                      aria-autocomplete="list"
+                      aria-expanded="false"
+                      placeholder={'search'}
+                      onChange={this.handleChange}
+                      value={dropdownSearch}
+                    />
+                  </div>
+                  <div className="bs-actionsbox">
+                    <div className="btn-group btn-group-sm btn-block">
+                      <button
+                        onClick={() => {
+                          this.onStop();
+
+                          this.setState({
+                            data: [],
+                            selectedTopics: JSON.parse(JSON.stringify(topics)).filter(topic => {
+                              if (dropdownSearch.length > 0) {
+                                return topic.includes(dropdownSearch);
+                              }
+                              return topic;
+                            })
+                          });
+                        }}
+                        type="button"
+                        className="actions-btn bs-select-all btn btn-light"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={() => {
+                          this.onStop();
+                          this.setState({ data: [], selectedTopics: [] });
+                        }}
+                        type="button"
+                        className="actions-btn bs-deselect-all btn btn-light"
+                      >
+                        Deselect All
+                      </button>
                     </div>
-                    <div className="bs-actionsbox">
-                      <div className="btn-group btn-group-sm btn-block">
-                        <button
+                  </div>
+                  {this.renderTopicList()}
+                </Dropdown.Menu>
+              </Dropdown>
+            </Col>
+
+            <Col xs="auto">
+              <Dropdown className="form-group dropdown bootstrap-select show-tick khq-select show">
+                <Dropdown.Toggle className="btn dropdown-toggle btn-white">
+                  Max Records: {maxRecords}
+                </Dropdown.Toggle>
+                <Dropdown.Menu
+                  style={{ maxHeight: '771px', overflow: 'hidden', minHeight: '182px' }}
+                >
+                  {MAX_RECORDS.map(maxRecord => {
+                    return (
+                      <li key={`record_${maxRecord}`}>
+                        <div
                           onClick={() => {
                             this.onStop();
-
-                            this.setState({
-                              data: [],
-                              selectedTopics: JSON.parse(JSON.stringify(topics)).filter(topic => {
-                                if (dropdownSearch.length > 0) {
-                                  return topic.includes(dropdownSearch);
-                                }
-                                return topic;
-                              })
-                            });
+                            this.setState({ maxRecords: maxRecord, data: [] });
                           }}
-                          type="button"
-                          className="actions-btn bs-select-all btn btn-light"
+                          role="option"
+                          className="dropdown-item"
+                          aria-selected="false"
                         >
-                          Select All
-                        </button>
-                        <button
-                          onClick={() => {
-                            this.onStop();
-                            this.setState({ data: [], selectedTopics: [] });
-                          }}
-                          type="button"
-                          className="actions-btn bs-deselect-all btn btn-light"
-                        >
-                          Deselect All
-                        </button>
-                      </div>
-                    </div>
-                    {this.renderTopicList()}
-                  </Dropdown.Menu>
-                </Dropdown>
-              </Col>
+                          {maxRecord}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </Dropdown.Menu>
+              </Dropdown>
+            </Col>
 
-              <Col>
-                <Dropdown className="form-group dropdown bootstrap-select show-tick khq-select show">
-                  <Dropdown.Toggle className="btn dropdown-toggle btn-white">
-                    Max Records: {maxRecords}
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu
-                    style={{ maxHeight: '771px', overflow: 'hidden', minHeight: '182px' }}
-                  >
-                    {MAX_RECORDS.map(maxRecord => {
-                      return (
-                        <li key={`record_${maxRecord}`}>
-                          <div
-                            onClick={() => {
-                              this.onStop();
-                              this.setState({ maxRecords: maxRecord, data: [] });
-                            }}
-                            role="option"
-                            className="dropdown-item"
-                            aria-selected="false"
-                          >
-                            {maxRecord}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </Dropdown.Menu>
-                </Dropdown>
-              </Col>
-
-              <Col xs="auto">
+            <Col xs="auto">
+              <button
+                onClick={() => {
+                  this.onStop();
+                  this.setState({ selectedStatus: STATUS.STARTED }, () => {
+                    this.onStart();
+                  });
+                }}
+                className="btn btn-primary"
+                type="submit"
+              >
+                <span className="d-md-none">Search </span>
+                <i className="fa fa-search" />
+              </button>
+            </Col>
+            <Col xs="auto">
+              <div className="btn-group actions" role="group">
                 <button
+                  className={`btn btn-secondary pause ${
+                    selectedStatus === STATUS.STARTED ? '' : 'd-none'
+                  }`}
                   onClick={() => {
                     this.onStop();
-                    this.setState({ selectedStatus: STATUS.STARTED }, () => {
-                      this.onStart();
-                    });
+                    this.setState({ selectedStatus: STATUS.PAUSED });
                   }}
-                  className="btn btn-primary"
-                  type="submit"
                 >
-                  <span className="d-md-none">Search </span>
-                  <i className="fa fa-search" />
+                  <i className={'fa fa-pause'} />
+                  <span> Pause</span>
                 </button>
-              </Col>
-              <Col>
-                <div className="btn-group actions" role="group">
-                  <button
-                    className={`btn btn-secondary pause ${
-                      selectedStatus === STATUS.STARTED ? '' : 'd-none'
-                    }`}
-                    onClick={() => {
-                      this.onStop();
-                      this.setState({ selectedStatus: STATUS.PAUSED });
-                    }}
-                  >
-                    <i className={'fa fa-pause'} />
-                    <span> Pause</span>
-                  </button>
-                  <button
-                    className={`btn btn-secondary resume ${
-                      selectedStatus === STATUS.PAUSED ? '' : 'd-none'
-                    }`}
-                    onClick={() => {
-                      this.onStart();
-                      this.setState({ selectedStatus: STATUS.STARTED });
-                    }}
-                  >
-                    <i className="fa fa-play" /> <span> Resume</span>
-                  </button>
-                  <button
-                    className={`btn btn-secondary empty ${
-                      selectedStatus === STATUS.STARTED || selectedStatus === STATUS.PAUSED
-                        ? ''
-                        : 'd-none'
-                    }`}
-                    onClick={() => {
-                      this.setState({ data: [] });
-                    }}
-                  >
-                    <i className="fa fa-remove" /> <span> Clear</span>
-                  </button>
-                </div>
-              </Col>
-            </Row>
-          </BootstrapForm>
-        </div>
+                <button
+                  className={`btn btn-secondary resume ${
+                    selectedStatus === STATUS.PAUSED ? '' : 'd-none'
+                  }`}
+                  onClick={() => {
+                    this.onStart();
+                    this.setState({ selectedStatus: STATUS.STARTED });
+                  }}
+                >
+                  <i className="fa fa-play" /> <span> Resume</span>
+                </button>
+                <button
+                  className={`btn btn-secondary empty ${
+                    selectedStatus === STATUS.STARTED || selectedStatus === STATUS.PAUSED
+                      ? ''
+                      : 'd-none'
+                  }`}
+                  onClick={() => {
+                    this.setState({ data: [] });
+                  }}
+                >
+                  <i className="fa fa-remove" /> <span> Clear</span>
+                </button>
+              </div>
+            </Col>
+          </Row>
+        </BootstrapForm>
         {selectedStatus !== STATUS.STOPPED && (
           <Table
             rowId={data => {
