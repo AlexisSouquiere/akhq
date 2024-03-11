@@ -292,17 +292,19 @@ class Sidebar extends Component {
         <SideNav.Toggle />
         <div className="logo-wrapper">
           <span className="logo" />
-          <p
-            style={{
-              color: 'white',
-              fontStyle: 'Italic',
-              textAlign: 'center',
-              margin: '20px 0 0 0'
-            }}
-          >
-            {''}
-            {tag}
-          </p>
+          {this.props.expanded && (
+            <p
+              style={{
+                color: 'white',
+                fontStyle: 'Italic',
+                textAlign: 'center',
+                margin: '20px 0 0 0'
+              }}
+            >
+              {''}
+              {tag}
+            </p>
+          )}
         </div>
         <SideNav.Nav defaultSelected={`${constants.TOPIC}`} style={{ background: 'black' }}>
           <NavItem className="nav-clusters" eventKey="cluster">
