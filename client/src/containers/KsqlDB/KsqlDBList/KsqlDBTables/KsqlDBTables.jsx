@@ -151,7 +151,7 @@ class KsqlDBTables extends Root {
               sortable: true,
               cell: (obj, col) => {
                 return obj[col.accessor] ? (
-                  <Link to={`/ui/${clusterId}/topic/${obj[col.accessor]}/data`}>
+                  <Link to={`/ui/${clusterId}/topic/${obj[col.accessor]}`}>
                     {obj[col.accessor]}
                   </Link>
                 ) : null;

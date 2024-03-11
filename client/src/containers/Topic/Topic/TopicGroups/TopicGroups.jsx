@@ -67,7 +67,7 @@ class TopicGroups extends Root {
     return Object.keys(topics).map(topic => {
       return (
         <Link
-          to={`/ui/${this.state.selectedCluster}/topic/${topic}/data`}
+          to={`/ui/${this.state.selectedCluster}/topic/${topic}`}
           key="lagTopic.topicId"
           className="btn btn-dark btn-sm mb-1 mr-1"
           onClick={noPropagation}

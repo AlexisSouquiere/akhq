@@ -189,8 +189,8 @@ class TopicProduce extends Form {
     topic.headers = headers;
 
     this.postApi(uriTopicsProduce(clusterId, topicId), topic).then(() => {
-      window.location = `/ui/${clusterId}/topic/${topicId}/data`;
       toast.success(`Produced to ${topicId}.`);
+      this.props.router.navigate({ pathname: `/ui/${clusterId}/topic/${topicId}` });
     });
   }
 

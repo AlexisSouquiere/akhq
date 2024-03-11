@@ -73,14 +73,14 @@ class ConsumerGroupMembers extends Root {
           key={i}
           onClick={() => {
             this.props.router.navigate({
-              pathname: `/ui/${this.state.selectedCluster}/topic/${topic}/data`,
+              pathname: `/ui/${this.state.selectedCluster}/topic/${topic}`,
               tab: constants.TOPIC
             });
           }}
         >
           <Link
             to={{
-              pathname: `/ui/${this.state.selectedCluster}/topic/${topic}/data`
+              pathname: `/ui/${this.state.selectedCluster}/topic/${topic}`
             }}
             key="topic"
             className="btn btn-primary btn-sm mb-1"

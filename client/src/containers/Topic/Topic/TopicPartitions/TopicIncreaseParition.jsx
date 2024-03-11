@@ -41,8 +41,8 @@ class TopicIncreasePartition extends Form {
 
     this.postApi(uriTopicIncreasePartition(selectedCluster, selectedTopic), partitionData).then(
       () => {
-        this.props.router.navigate({ pathname: `/ui/${selectedCluster}/topic` });
         toast.success('Topic partition updated');
+        this.props.router.navigate({ pathname: `/ui/${selectedCluster}/topic` });
       }
     );
   }

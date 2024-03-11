@@ -61,7 +61,7 @@ class ConsumerGroupTopics extends Root {
               sortable: true,
               cell: (obj, col) => {
                 return (
-                  <Link to={`/ui/${this.state.selectedCluster}/topic/${obj[col.accessor]}/data`}>
+                  <Link to={`/ui/${this.state.selectedCluster}/topic/${obj[col.accessor]}`}>
                     {obj[col.accessor]}
                   </Link>
                 );

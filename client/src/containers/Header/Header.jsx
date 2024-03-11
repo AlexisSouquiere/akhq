@@ -42,9 +42,8 @@ class Header extends Root {
       sessionStorage.setItem('roles', organizeRoles(currentUserData.roles));
       localStorage.removeItem('jwtToken');
       this.setState({ login: currentUserData.logged }, () => {
-        this.props.router.navigate({ pathname: '/ui/login' }, { replace: true });
-        window.location.reload(false);
         toast.success('Logged out successfully');
+        this.props.router.navigate({ pathname: '/ui/login' }, { replace: true });
       });
     });
   }
