@@ -513,9 +513,7 @@ class TopicList extends Root {
     const actions = [constants.TABLE_CONFIG];
     if (roles.TOPIC_DATA && roles.TOPIC_DATA.includes('READ')) {
       actions.push(constants.TABLE_DETAILS);
-      onDetailsFunction = id => {
-        this.props.router.navigate(`/ui/${selectedCluster}/topic/${id}/data`);
-      };
+      onDetailsFunction = id => `/ui/${selectedCluster}/topic/${id}/data`;
     }
     if (roles.TOPIC && roles.TOPIC.includes('DELETE')) {
       actions.push(constants.TABLE_DELETE);
@@ -578,16 +576,7 @@ class TopicList extends Root {
             this.handleOnDelete(topic);
           }}
           onDetails={onDetailsFunction}
-          onConfig={id => {
-            this.props.router.navigate(
-              {
-                pathname: `/ui/${selectedCluster}/topic/${id}/configs`
-              },
-              {
-                replace: true
-              }
-            );
-          }}
+          onConfig={id => `/ui/${selectedCluster}/topic/${id}/configs`}
           actions={actions}
         />
 

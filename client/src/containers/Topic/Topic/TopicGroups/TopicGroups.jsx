@@ -133,12 +133,7 @@ class TopicGroups extends Root {
             this.setState({ consumerGroups: data });
           }}
           onDetails={id => {
-            this.props.router.navigate(
-              {
-                pathname: `/ui/${selectedCluster}/group/${id}`
-              },
-              { replace: true }
-            );
+            `/ui/${selectedCluster}/group/${id}`;
           }}
           actions={[constants.TABLE_DETAILS]}
         />

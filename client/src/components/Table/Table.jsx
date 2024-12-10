@@ -15,6 +15,7 @@ import {
   faSort,
   faTrash
 } from '@fortawesome/free-solid-svg-icons';
+import { Link } from 'react-router-dom';
 
 class Table extends Component {
   state = {
@@ -145,7 +146,7 @@ class Table extends Component {
     const { idCol } = this.props;
 
     if (onDetails) {
-      onDetails(idCol ? row[idCol] : row.id);
+      this.props.router.navigate(onDetails(idCol ? row[idCol] : row.id));
     }
   }
 
@@ -372,28 +373,16 @@ class Table extends Component {
         )}
         {actions.find(el => el === constants.TABLE_DETAILS) && (
           <td className="khq-row-action khq-row-action-main action-hover">
-            <span
-              title="Details"
-              id="details"
-              onClick={() => {
-                onDetails && onDetails(idColVal);
-              }}
-            >
+            <Link title="Details" id="details" to={onDetails && onDetails(idColVal)}>
               <FontAwesomeIcon icon={faSearch} />
-            </span>
+            </Link>
           </td>
         )}
         {actions.find(el => el === constants.TABLE_CONFIG) && (
           <td className="khq-row-action khq-row-action-main action-hover">
-            <span
-              title="Config"
-              id="config"
-              onClick={() => {
-                onConfig && onConfig(idColVal);
-              }}
-            >
+            <Link title="Config" id="config" to={onConfig && onConfig(idColVal)}>
               <FontAwesomeIcon icon={faGear} />
-            </span>
+            </Link>
           </td>
         )}
         {actions.find(el => el === constants.TABLE_DELETE) && (
